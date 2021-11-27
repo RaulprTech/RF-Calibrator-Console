@@ -1,166 +1,190 @@
-import glob
+import numpy as np 
 
 ################################        Modules             ################################
 #   import and read documents
 from app.doc_process.decoder_s2p import decoder_s2p as decode
 from app.doc_process.decoder_s2p import params_complex_destructure as fracc
-from app.doc_process.decoder_s2p import params_complex_destructure_output as fracc_out
 
 #   export documents
 from app.doc_process.doc_out import doc_out
-#   converter function
-from app.operations.param_converter import converter
 
 #   graphs
-from app.operations.graphs.rect_graph import rectangular_graph
-from app.operations.graphs.polar_graph import polar_graph
-from app.operations.graphs.smith_graph import Smith
+# from app.operations.graphs.rect_graph import rectangular_graph
+# from app.operations.graphs.polar_graph import polar_graph
+from app.operations.graphs.smith_chart import smith_chart
 
 
 lines = []
 
-def select_file():
-    print("Estos archivos estan disponibles para leer")
-    files = glob.glob(f"input/" + "*.s2p") 
-    print(f"""          {files}""")
-    name_file = input(f"""Selecciona el archivo que deseas usar (coloca el nombre y ruta del archivo aqui) : """)
-    return "./" + str(name_file).replace("\'", "")
 
+####################################           Proyecto 2          ##################################
 
-def params_for_graph(route, structure):
-    frecs = []
-    parameters_list = decode(route)
-    print("Estos son los parametros disponibles para graficar")
-    for parameter in parameters_list:
-        line_params = structure(parameter)
-        frecs.append(line_params[0])
-    print(frecs)
-    frec_graph = input("Escribe la frecuencia de los parametros que deseas graficar: ")
-    for parameter in parameters_list:
-        line_params = structure(parameter)
-        if(frec_graph == line_params[0]):
-            return line_params
+def delta_param(array):  
+    delta = array[0][0]*array[1][1] - array[0][1]*array[1][0]
+    return delta
 
-    print("Lo siento no fueron medidos parametros en esa frecuencia")
-    reset = input("Deseas intentar con otro valor [s/n] ")
-    if reset == 's':
-        params_for_graph()
-    else:
-        print("Adios")
+def delta_inverse(array):
+    delta = array[0][1]*array[1][0] - array[0][0]*array[1][1]
+    return delta
 
+z0=50
 
-def plot_menu(mode, route_file):
-    if mode == '1':
-        print("¡Genial Empecemos!")
-        route_file = select_file()
-        p = params_for_graph(route_file, fracc)
-    elif mode == '2':
-        p = params_for_graph(route_file, fracc_out)
-    plot_type = input("¿Como quieres graficar? [1 = Rectangular, 2 = Polar, 3 = Carta de Smith] ")
-    if plot_type == '1':
-        print("Preparando para graficar en forma Rectangular ...")
-        rectangular_graph(p)
-    elif plot_type == '2':
-        print("Preparando para graficar en forma Polar ...")
-        polar_graph(p)
-    elif plot_type == '3':
-        print("Preparando para graficar en forma de Carta de Smith ...")
-        smith = Smith()
-        smith.markZ(p[1], text='Z1')
-        smith.markZ(p[2], text='Z2')
-        smith.markZ(p[3], text='Z3')
-        smith.markZ(p[4], text='Z4')
-        # smith.drawZList([0, 50j, 10000j, -50j, 0])
-        print("graficando")
-        smith.show()
-    else: 
-        print("*******************************************************************************")
-        print("Creo que te confundiste, intentemos de nuevo ")
-        plot_menu()
+y0=1/z0
+
+s11 = []
+def s_to_t(params):
+
+    delta = delta_inverse(params)
+    i11 = 1/params[1][0]
+    i12 = -params[1][1]/params[1][0]
+    i21 = params[0][0]/params[1][0]
+    i22 = delta/params[1][0]
+    array_params = (
+        str(i11),
+        str(i12),
+        str(i21),
+        str(i22)
+    )
+    return array_params
     
-    reset = input("¿Quieres graficar algo mas? [s/n] ")
-    if reset == 's':
-        plot_menu(mode, route_file)
-    elif reset == 'n':
-        print("Oh esta bien, hasta luego")
-    else: 
-        print("*******************************************************************************")
-        print("Upps creo que te equivocaste de tecla, intentemos de nuevo")
-        plot_menu(mode, route_file)
 
 
 
+def converter(route_thru, route_line, route_reflect1, route_reflect2):
+    list_thru = decode(route_thru)
+    list_line = decode(route_line)
+    list_w1 = decode(route_reflect1)
+    print("Calibrando ...")
 
-def converter_menu():
-    route = select_file()
-    parameters_list = decode(route)
-    entrada = input(f"¿Que tipo de parametro contiene el archivo? (z, y, abcd, s o t) ")
-    salida = input(f"¿En que tipo de parametro quieres que se convierta? (z, y, abcd, s o t) ")
+    lines.append(f"!Nueva Lista de parametros corregidos \n")
+    # lines.append("# frec param1 param2  param3  param4 \n")
+    lines.append("# Hz S RI R 50 \n")
 
-    lines.append(f"!Nueva Lista de parametros {salida.upper()} \n")
-    lines.append("# frec param1 param2  param3  param4 \n")
+    for i in range(len(list_thru)):
+        ### thru
+        thru_params = fracc(list_thru[i])
+        frecs = thru_params[0]
+        array_thru = ([[complex(thru_params[1]), complex(thru_params[2])], [complex(thru_params[3]), complex(thru_params[4])]])
+        thru_matriz_np = np.array([[complex(thru_params[1]), complex(thru_params[2])], [complex(thru_params[3]), complex(thru_params[4])]]) 
+        thru_results =  s_to_t(array_thru)
+        thru_matriz = np.array([[complex(thru_results[0]), complex(thru_results[1])], [complex(thru_results[2]), complex(thru_results[3])]])
+        thru_matriz_inverse = np.linalg.inv(thru_matriz)        #   Calculo de Inversa de Thru
 
-    for parameter in parameters_list:
-        line_params = fracc(parameter)
-        # print(params) 
-        array_params = [[line_params[1], line_params[2]], [line_params[3], line_params[4]]]
-        results =  converter(entrada, salida, array_params)
-        lines.append(line_params[0] + " \t")
-        lines.append(str(results).replace("(", "\t").replace(")", "").replace(",", "\t").replace("\'", ""))
+        ###     line
+        line_params = fracc(list_line[i])
+        array_line = ([[complex(line_params[1]), complex(line_params[2])], [complex(line_params[3]), complex(line_params[4])]]) 
+        line_results =  s_to_t(array_line)
+        line_matriz = np.array([[complex(line_results[0]), complex(line_results[1])], [complex(line_results[2]), complex(line_results[3])]])
+
+        ###     reflect1
+        w1_params = fracc(list_w1[i])
+        array_w1 = ([[complex(w1_params[1]), complex(w1_params[2])], [complex(w1_params[3]), complex(w1_params[4])]])
+        w1_matriz_np = np.array([[complex(w1_params[1]), complex(w1_params[2])], [complex(w1_params[3]), complex(w1_params[4])]])  
+        w1_results =  s_to_t(array_w1)
+        w1_matriz = np.array([[complex(w1_results[0]), complex(w1_results[1])], [complex(w1_results[2]), complex(w1_results[3])]])
+
+
+        ###     Operando
+        t = line_matriz.dot(thru_matriz_inverse)
+        
+        result = np.roots([t[1][0], t[1][1]-t[0][0], -t[0][1]])
+
+        if abs(result[0])>abs(result[1]):
+            ac = result[0]
+            b = result[1]
+        else:
+            ac = result[1]
+            b = result[0]
+        
+        ac_inv = 1/ac
+
+        d = np.linalg.det(thru_matriz_np)  #  - determinante de S
+
+        g = 1/thru_matriz_np[1][0]      
+
+        e = thru_matriz_np[0][0]           
+
+        f = -thru_matriz_np[1][1]           
+
+        phi = ((ac*f)-d)/(ac-e)               
+
+        beta_alpha = (e - b)/(d - (b*f))        
+
+        w1 = w1_matriz_np[0][0]
+
+        w2 = w1_matriz_np[1][1]
+
+        a1 = np.sqrt(((d -b*f)*(b - w1)*(1 + beta_alpha*w2))/((1 - ac_inv*e)*(phi + w2)*(ac_inv*w1 - 1)))
+
+        a_est=(b-w1)/(w1*ac_inv-1)
+
+        a2 = -a1
+
+        a1_dif=abs(a_est-a1)
+
+        a2_dif=abs(a_est-a2)
+
+
+        if a2_dif > a1_dif:
+
+            a=a1
+
+        else:
+
+            a=a2
+
+        c = a/ac
+
+        alpha=(d-b*f)/(a-c*e)
+
+        beta = (e-b)/(d-(b*f))
+
+        r22_p22 = (g*(ac-e))/(ac-b)
+
+        num1 = (r22_p22*(a-b*c)*(alpha-beta*phi)*(alpha*t[0][1]-beta*t[0][0]+b*beta*t[1][0]-b*alpha*t[1][1]))
+        
+        den1 =  (c*beta*t[1][1]-c*beta*t[0][1]-a*beta*t[1][0]+a*alpha*t[1][1])
+
+        s11_dut = num1/den1
+        
+        num2 = r22_p22*(a-b*c)*(alpha-beta*phi)*(alpha*t[0][1]-c*t[0][0]+b*a*(t[1][0]-phi*t[1][1]))
+
+
+        s22_dut = num2/den1
+
+        num3 = r22_p22*(a-b*c)*(alpha-beta*phi)
+
+        s21_dut = num3/den1
+
+        num4_01 = r22_p22*(a-b*c)*(alpha-beta*phi)*(t[0][0])-phi*t[0][1]-b*t[1][0]+b*phi*t[1][1]
+        num4_02 = (num4_01/den1)+s11_dut*s22_dut
+        s12_dut = num4_02/s21_dut
+
+        line = [s11_dut, s21_dut, s12_dut, s22_dut]
+        l = np.array([x for x in line])
+        real = [x.real for x in l]
+        imag = [x.imag for x in l]
+        
+
+        line = []
+        lines.append(frecs + " ")
+        for k in range(len(real)):
+            lines.append(f"\t")
+            lines.append(str(real[k]) + " ")
+            lines.append(f"\t")
+            lines.append(str(imag[k]) + " ")
+            lines.append(f"\t")
+        
         lines.append("\n")
-    name_route_out = route.replace("./input/", "./output/")
-    doc_out(name_route_out, lines)
-    print("El archivo de resultados ya esta disponible en la carpeta output")
-    print("Tambien puedes graficar tus nuevos parametros")
-    a = input("¿Deseas graficar? [s/n] ")
-    if a == 's':
-        plot_menu('2', name_route_out)
-    elif a == 'n':
-        print("OK, Adios")
     
-    
-    
+    doc_out("./output/corregidos.s2p", lines)
+    print("Archivo de Correcciones Generado en /output/")
 
-    
-
-    
-
-    # if(results == 0):
-    #     print("Por favor inserte un valor valido ")
-    #     main_menu()
-    # else:
-    #     print(results)
-    #     a = input("Seguimos haciendo convirtiendo [s/n] ")
-    #     if a == "s":
-    #         main_menu() 
-    #     elif a == "n":
-    #         print("Adios")
-    
-def main_menu():
-    print(f"""
-    ******************************************************************************************************************
-                                
-                                **** Bienvenido a nuestra herramienta para RF ****
-
-    ******************************************************************************************************************
-    """)
-    inicio = input("¿Que deseas hacer? [1 = Graficar, 2 = Convertir Parametros] ")
-    if inicio == '1':
-        plot_menu('1', None)
-    elif inicio == '2':
-        converter_menu()
-    else:
-        print("*******************************************************************************")
-        print("             ¡Volvamos a intentarlo!           ")
-        main_menu()
-
-
-
+    print("Graficando Archivo Corregido  ...")
+    smith_chart("./output/corregidos.s2p")
 
 if __name__ == '__main__':
-    main_menu()
+    print("Grafica Original de Valores Medidos")
+    smith_chart("./input/ATF38143_VGS_-0.5V_VDS_3.0V.s2p")
+    converter("./input/Thru.s2p", "./input/Line.s2p", "./input/Open_P1.s2p", "./input/Open_P2.s2p")
 
-
-
-    #     array_params = [[line_params[1], line_params[2]], [line_params[3], line_params[4]]]
-    #     results =  converter(entrada, salida, array_params)
