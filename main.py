@@ -9,19 +9,13 @@ from app.doc_process.decoder_s2p import params_complex_destructure as fracc
 from app.doc_process.doc_out import doc_out
 
 #   graphs
-# from app.operations.graphs.rect_graph import rectangular_graph
-# from app.operations.graphs.polar_graph import polar_graph
 from app.operations.graphs.smith_chart import smith_chart
 
 
-lines = []
+
 
 
 ####################################           Proyecto 2          ##################################
-
-def delta_param(array):  
-    delta = array[0][0]*array[1][1] - array[0][1]*array[1][0]
-    return delta
 
 def delta_inverse(array):
     delta = array[0][1]*array[1][0] - array[0][0]*array[1][1]
@@ -31,9 +25,10 @@ z0=50
 
 y0=1/z0
 
+lines = []
+
 s11 = []
 def s_to_t(params):
-
     delta = delta_inverse(params)
     i11 = 1/params[1][0]
     i12 = -params[1][1]/params[1][0]
@@ -54,7 +49,6 @@ def converter(route_thru, route_line, route_reflect1, route_reflect2):
     list_thru = decode(route_thru)
     list_line = decode(route_line)
     list_w1 = decode(route_reflect1)
-    print("Calibrando ...")
 
     lines.append(f"!Nueva Lista de parametros corregidos \n")
     # lines.append("# frec param1 param2  param3  param4 \n")
@@ -64,28 +58,28 @@ def converter(route_thru, route_line, route_reflect1, route_reflect2):
         ### thru
         thru_params = fracc(list_thru[i])
         frecs = thru_params[0]
-        array_thru = ([[complex(thru_params[1]), complex(thru_params[2])], [complex(thru_params[3]), complex(thru_params[4])]])
-        thru_matriz_np = np.array([[complex(thru_params[1]), complex(thru_params[2])], [complex(thru_params[3]), complex(thru_params[4])]]) 
-        thru_results =  s_to_t(array_thru)
-        thru_matriz = np.array([[complex(thru_results[0]), complex(thru_results[1])], [complex(thru_results[2]), complex(thru_results[3])]])
-        thru_matriz_inverse = np.linalg.inv(thru_matriz)        #   Calculo de Inversa de Thru
+        array_thru_s = ([[complex(thru_params[1]), complex(thru_params[2])], [complex(thru_params[3]), complex(thru_params[4])]])
+        thru_array_np_s = np.array([[complex(thru_params[1]), complex(thru_params[2])], [complex(thru_params[3]), complex(thru_params[4])]]) 
+        thru_t =  s_to_t(array_thru_s)
+        thru_matriz_t = np.array([[complex(thru_t[0]), complex(thru_t[1])], [complex(thru_t[2]), complex(thru_t[3])]])
+        thru_matriz_inverse_t = np.linalg.inv(thru_matriz_t)        #   Calculo de Inversa de Thru
 
         ###     line
         line_params = fracc(list_line[i])
-        array_line = ([[complex(line_params[1]), complex(line_params[2])], [complex(line_params[3]), complex(line_params[4])]]) 
-        line_results =  s_to_t(array_line)
-        line_matriz = np.array([[complex(line_results[0]), complex(line_results[1])], [complex(line_results[2]), complex(line_results[3])]])
+        array_line_s = ([[complex(line_params[1]), complex(line_params[2])], [complex(line_params[3]), complex(line_params[4])]]) 
+        line_t =  s_to_t(array_line_s)
+        line_matriz_t = np.array([[complex(line_t[0]), complex(line_t[1])], [complex(line_t[2]), complex(line_t[3])]])
 
         ###     reflect1
         w1_params = fracc(list_w1[i])
-        array_w1 = ([[complex(w1_params[1]), complex(w1_params[2])], [complex(w1_params[3]), complex(w1_params[4])]])
-        w1_matriz_np = np.array([[complex(w1_params[1]), complex(w1_params[2])], [complex(w1_params[3]), complex(w1_params[4])]])  
-        w1_results =  s_to_t(array_w1)
-        w1_matriz = np.array([[complex(w1_results[0]), complex(w1_results[1])], [complex(w1_results[2]), complex(w1_results[3])]])
+        # array_w1_s = ([[complex(w1_params[1]), complex(w1_params[2])], [complex(w1_params[3]), complex(w1_params[4])]])
+        w1_matriz_np_s = np.array([[complex(w1_params[1]), complex(w1_params[2])], [complex(w1_params[3]), complex(w1_params[4])]])  
+        # w1_results =  s_to_t(array_w1_s)
+        # w1_matriz = np.array([[complex(w1_results[0]), complex(w1_results[1])], [complex(w1_results[2]), complex(w1_results[3])]])
 
 
         ###     Operando
-        t = line_matriz.dot(thru_matriz_inverse)
+        t = line_matriz_t.dot(thru_matriz_inverse_t)
         
         result = np.roots([t[1][0], t[1][1]-t[0][0], -t[0][1]])
 
@@ -98,21 +92,23 @@ def converter(route_thru, route_line, route_reflect1, route_reflect2):
         
         ac_inv = 1/ac
 
-        d = np.linalg.det(thru_matriz_np)  #  - determinante de S
+        det_thru_s = np.linalg.det(thru_array_np_s)  #  - determinante de S
 
-        g = 1/thru_matriz_np[1][0]      
+        d = -det_thru_s
 
-        e = thru_matriz_np[0][0]           
+        g = 1/thru_array_np_s[1][0]      
 
-        f = -thru_matriz_np[1][1]           
+        e = thru_array_np_s[0][0]           
+
+        f = -thru_array_np_s[1][1]           
 
         phi = ((ac*f)-d)/(ac-e)               
 
         beta_alpha = (e - b)/(d - (b*f))        
 
-        w1 = w1_matriz_np[0][0]
+        w1 = w1_matriz_np_s[0][0]
 
-        w2 = w1_matriz_np[1][1]
+        w2 = w1_matriz_np_s[1][1]
 
         a1 = np.sqrt(((d -b*f)*(b - w1)*(1 + beta_alpha*w2))/((1 - ac_inv*e)*(phi + w2)*(ac_inv*w1 - 1)))
 
@@ -137,7 +133,7 @@ def converter(route_thru, route_line, route_reflect1, route_reflect2):
 
         alpha=(d-b*f)/(a-c*e)
 
-        beta = (e-b)/(d-(b*f))
+        beta = (e-b)/(a-c*e)
 
         r22_p22 = (g*(ac-e))/(ac-b)
 
@@ -147,7 +143,7 @@ def converter(route_thru, route_line, route_reflect1, route_reflect2):
 
         s11_dut = num1/den1
         
-        num2 = r22_p22*(a-b*c)*(alpha-beta*phi)*(alpha*t[0][1]-c*t[0][0]+b*a*(t[1][0]-phi*t[1][1]))
+        num2 = r22_p22*(a-b*c)*(alpha-beta*phi)*(c*phi*t[0][1]-c*t[0][0]+a*(t[1][0]-phi*t[1][1]))
 
 
         s22_dut = num2/den1
@@ -164,7 +160,7 @@ def converter(route_thru, route_line, route_reflect1, route_reflect2):
         l = np.array([x for x in line])
         real = [x.real for x in l]
         imag = [x.imag for x in l]
-        
+
 
         line = []
         lines.append(frecs + " ")
@@ -184,7 +180,8 @@ def converter(route_thru, route_line, route_reflect1, route_reflect2):
     smith_chart("./output/corregidos.s2p")
 
 if __name__ == '__main__':
-    print("Grafica Original de Valores Medidos")
-    smith_chart("./input/ATF38143_VGS_-0.5V_VDS_3.0V.s2p")
+    # print("Grafica Original de Valores Medidos")
+    # smith_chart("./input/ATF38143_VGS_-0.5V_VDS_3.0V.s2p")
+    print("Calibrando ...")
     converter("./input/Thru.s2p", "./input/Line.s2p", "./input/Open_P1.s2p", "./input/Open_P2.s2p")
 

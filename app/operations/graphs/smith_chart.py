@@ -16,7 +16,7 @@ def select():
     elif s == 's3':
         n = 1
         m = 0
-    elif s == 's3':
+    elif s == 's4':
         n = 1
         m = 1
     return n, m
@@ -26,6 +26,7 @@ def smith_chart(route):
     print(line)
     i = select()
     i[0] != 5 and line.plot_s_smith(m=i[0],n=i[1],  #   Only one param
+        r=1,
         chart_type='s',
         show_legend=True,
         draw_labels=True,
